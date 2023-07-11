@@ -3,10 +3,9 @@
 #include  "../header/LCD.h"
 
 unsigned int REdge = 0,FEdge = 0;
-unsigned int count = 0;
+unsigned int count = 0, index = 0;
 unsigned char first = 0x0;
-char char_max[4];
-unsigned char index = 0;
+char char_array[4] = {'\0','\0','\0','\0'};
 int adcVal[4];
 int LIDARarr [2][50];
 
@@ -116,6 +115,12 @@ void ADC_touch(){
 
 }
 
+void to_char(unsigned int t){
+
+    char_array[0] = t & 0xFF;
+    char_array[1] = (t >> 8) & 0xFF;
+
+}
 
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer0_A0_ISR (void)
@@ -175,28 +180,31 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
 {
   while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
   if (state == state1){
-      char_max[index] = UCA0RXBUF;
+      char_array[index] = UCA0RXBUF;
       index++;
-      if (char_max[index-1] == '\n'){
+      if (char_array[index-1] == '\n'){
           index = 0;
           LPM0_EXIT;
       }
   }
-  if (state == state3){
+  else if (state == state3){
       REdge = UCA0RXBUF;
       IE2 |= UCA0TXIE;
   }
   else if (UCA0RXBUF == '1'){
       state = state1;
+      index = 0;
   }
   else if (UCA0RXBUF == '2'){
-      state = state1;
+      state = state2;
       LPM0_EXIT;
   }
   else if (UCA0RXBUF == '3'){
       state = state3;
+      UCA0TXBUF = '3';
       LPM0_EXIT;
   }
+
 
 }
 
@@ -209,7 +217,12 @@ void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI0TX_ISR (void)
 #error Compiler not supported!
 #endif
 {
-    UCA0TXBUF = index;
+    while(char_array[index] != '\0'){
+        while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+        UCA0TXBUF = char_array[index];
+        index++;
+    }
+    index = 0;
     IE2 &= ~UCA0TXIE;                       // Disable USCI_A0 TX interrupt
     LPM0_EXIT;
 }

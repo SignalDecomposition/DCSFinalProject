@@ -9,10 +9,9 @@ extern enum FSMstate state;   // global variable
 extern enum SYSmode lpm_mode; // global variable
 
 extern unsigned int REdge, FEdge;
-extern unsigned int count;
+extern unsigned int count, index;
 extern unsigned char first;
-extern char char_max[4];
-extern unsigned char index;
+extern char char_array[4];
 extern int adcVal[4];
 extern int LIDARarr [2][50];
 
@@ -30,7 +29,7 @@ extern void Enable_ECHO();
 extern void Disable_ECHO();
 extern void ADC_enable();
 extern void ADC_touch();
-//extern void Send_Clib();
+extern void to_char(unsigned int t);
 
 extern __interrupt void Timer0_A0_ISR (void);
 extern __interrupt void Timer1_A1_ISR (void);
