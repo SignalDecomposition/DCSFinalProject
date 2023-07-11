@@ -18,7 +18,6 @@ void main(void){
 	    break;
 	  case state1:
 	      ObjectsDetectorSystem(20);
-          P2OUT |= BIT7;
 	      break;
       case state2:
             LIDR_test();

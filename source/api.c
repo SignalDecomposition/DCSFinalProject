@@ -17,9 +17,12 @@ void ObjectsDetectorSystem(unsigned int steps){
     unsigned char char_angle;
     Enable_SERVO(79);
     enterLPM(lpm_mode);
-    enterLPM(lpm_mode);
-    if (char_max[0] != 0){
-        max = (char_max[2]+'0')*100 + (char_max[1]+'0')*10 + (char_max[0]+'0');
+    if (char_array[0] != 0){
+        max = (char_array[2]+'0')*100 + (char_array[1]+'0')*10 + (char_array[0]+'0');
+        char_array[0] = '\0';
+        char_array[1] = '\0';
+        char_array[2] = '\0';
+        char_array[3] = '\0';
     }
     while(state == state1){
 
@@ -128,21 +131,23 @@ void LIDR_Clib(){
 
     int i = 0;
     while(i < 50 ){
-        i = i + 5;
-        index = (unsigned char)i/5;
+        i = i + 1000;
         lcd_home();
         printIntToLCD(i);
+        to_char(i);
         enterLPM(lpm_mode);
         ADC_enable();
         ADC_touch();
 
-        LIDARarr[0][i-1] = adcVal[3];//P1.0 LIDAR1
-        LIDARarr[1][i-1] = adcVal[0];//P1.3 LIDAR2
+        //LIDARarr[0][i-1] = adcVal[3];//P1.0 LIDAR1
+        //LIDARarr[1][i-1] = adcVal[0];//P1.3 LIDAR2
     }
     i = 0;
     //Send_Clib();
     //enterLPM(lpm_mode);
-    state = state2;
+    state = state0;
+    lcd_home();
+    lcd_clear();
 
 }
 
