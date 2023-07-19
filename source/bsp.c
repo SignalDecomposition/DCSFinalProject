@@ -56,10 +56,10 @@ void GPIOconfig(void){
 void TIMERconfig(void){
 
     // SERVO TIMER
-    TA0CTL |= TASSEL_2 + MC_0 + ID_3;//SMCLK, UP MODE, DIV 8
-    TA0CCR0 = 3605;
-    TA0CCTL1 |= OUTMOD_7; // Reset-Set mode
 
+    TA0CTL |= TASSEL_2 + MC_0 + ID_0;//SMCLK, UP MODE, DIV 1
+    TA0CCR0 = 26500;
+    TA0CCTL1 |= OUTMOD_7; // Reset-Set mode
 
 
     // ULTRA-SONIC TIMER

@@ -7,19 +7,23 @@ enum SYSmode lpm_mode;
 
 void main(void){
   
-  state = state0;  // start in idle state on RESET
+  state = state1;  // start in idle state on RESET
   lpm_mode = mode0;     // start in idle state on RESET
   sysConfig();
-  
+  int j;
+  int steps = 30;
+  int cycles_in;
+
   while(1){
 	switch(state){
-	case state0:
-	    enterLPM(lpm_mode);
-	    break;
-	  case state1:
-	      ObjectsDetectorSystem(20);
-	      break;
-      case state2:
+	    case state0:
+            enterLPM(lpm_mode);
+            break;
+	    case state1:
+            // 0 degrees is 460 and 180 degrees is 2170
+            ObjectsDetectorSystem(30);
+            break;
+	    case state2:
             LIDR_test();
             break;
         case state3:
@@ -27,6 +31,9 @@ void main(void){
             break;
         case state4:
             Telemeter(0);
+            break;
+        case state5:
+            //TBD script
             break;
 	}
   }
