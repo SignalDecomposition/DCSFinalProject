@@ -4,11 +4,76 @@
 //T_on = 2^17 * (1.55m + 0.6m * arctan(10k*2.5m*angle/180 -2*pi))
 unsigned int arr[21] = {79,80,82,84,86,90,94,102,113,133,168,214,248,268,283,294,301,306,309,311,313};
 
-void Telemeter(unsigned int angle){
-    unsigned int steps;
-    steps = (angle >> 3) -1;
-    ObjectsDetectorSystem(steps);
+int conv_str_to_int(char* array){
+    int i_arr = 0;
+    int value = 0;
+    while(array[i_arr] != '\n'){
+        value = value*10 + (array[i_arr] - '0');
+        i_arr++;
+    }
+
+    return value;
 }
+void Telemeter(){
+
+    unsigned int angle;
+    int cycles_in;
+    int angle_in;
+    int angle_true;
+    //white to send index
+    enterLPM(lpm_mode);
+
+    lcd_clear();
+    lcd_home();
+    angle_in = conv_str_to_int(angle_string);
+    printIntToLCD(angle_in);
+
+    Enable_SERVO(QFangle(angle_in) + 460);
+    enterLPM(lpm_mode);
+    Disable_SERVO();
+
+
+    while(state == state4){
+
+        cycles_in = get_sonic_range();
+        to_char(cycles_in);
+        transmite_UART(2);
+
+
+        lcd_home();
+        lcd_new_line;
+        printIntToLCD(cycles_in);
+
+    }
+    lcd_clear();
+    lcd_home();
+
+}
+
+
+
+int get_sonic_range(){
+    //range from 2cm to 450cm
+    unsigned int range_US;
+    int i;
+    // for 25 C room temputre
+    unsigned int speed_sound = 34645;
+
+    Enable_TRIGGER();
+    Enable_ECHO();
+    enterLPM(lpm_mode);
+
+    range_US =0;
+    for(i = 0 ;i < 4; i++){
+        range_US += FEdge - REdge;
+    }
+    range_US = range_US >> 2;
+    Disable_ECHO();
+    Disable_TRIGGER();
+
+    return range_US;
+}
+
 // Qformat angle
 int QFangle(int angle_in){
     int timer_out;
@@ -28,6 +93,10 @@ void ObjectsDetectorSystem(unsigned int steps){
     unsigned char char_angle;
     int true_angle;
     int mult_step;
+
+    lcd_clear();
+    lcd_home();
+
     Enable_SERVO(460);
     enterLPM(lpm_mode);
     mult_step = 180/steps;
@@ -43,13 +112,14 @@ void ObjectsDetectorSystem(unsigned int steps){
         for (j = 0 ; j <= steps ; j++){
             true_angle = j*mult_step;
             angle = QFangle(true_angle);
-            lcd_home();
+
 
 
             Enable_SERVO(angle + 460);
             Enable_TRIGGER();
             Enable_ECHO();
 
+            lcd_home();
             printIntToLCD(true_angle);//P1.0 LIDAR1
             enterLPM(lpm_mode);
             Disable_ECHO();
@@ -139,13 +209,33 @@ void LIDR(){
 }
 
 void LIDR_test(){
+    Enable_SERVO(460); // 90 degres
+    enterLPM(lpm_mode);
+    Disable_SERVO();
+    int adc_V1 ,adc_V2 ;
+    int ii;
     while(state == state2){
-        ADC_enable();
-        ADC_touch();
+        adc_V1 = 0;
+        adc_V2 = 0;
+
+        for(ii = 0; ii< 4; ii++){
+            ADC_enable();
+            ADC_touch();
+            adc_V1 +=adcVal[3];//P1.0 LIDAR1
+            adc_V2 +=adcVal[0];//P1.3 LIDAR2
+        }
+        adc_V1 = adc_V1 >> 2;
+        adc_V2 = adc_V2 >> 2;
+        //ADC_enable();
+        //ADC_touch();
         lcd_home();
-        printIntToLCD(adcVal[3]);//P1.0 LIDAR1
+        printIntToLCD(adc_V1);//P1.0 LIDAR1
         lcd_new_line;
-        printIntToLCD(adcVal[0]);//P1.3 LIDAR2
+        printIntToLCD(adc_V2);//P1.3 LIDAR2
+        to_char(adc_V1);
+        transmite_UART(2);
+        to_char(adc_V2);
+        transmite_UART(2);
     }
 
 }//LIDR_test
@@ -188,3 +278,17 @@ void printIntToLCD(unsigned int temp){
     //lcd_home();
     lcd_puts(s);
 }
+
+void test_fun(){
+    int a = 1023;
+    int b = 1000;
+    to_char(a);
+    transmite_UART(2);
+    to_char(b);
+    transmite_UART(2);
+    enterLPM(lpm_mode);
+
+}
+
+
+

@@ -7,12 +7,16 @@ enum SYSmode lpm_mode;
 
 void main(void){
   
-  state = state1;  // start in idle state on RESET
+
+  state = state0;  // start in idle state on RESET
   lpm_mode = mode0;     // start in idle state on RESET
   sysConfig();
   int j;
   int steps = 30;
   int cycles_in;
+  Enable_SERVO(460);
+  enterLPM(lpm_mode);
+  Disable_SERVO();
 
   while(1){
 	switch(state){
@@ -30,10 +34,13 @@ void main(void){
             LIDR_Clib();
             break;
         case state4:
-            Telemeter(0);
+            Telemeter();
             break;
         case state5:
-            //TBD script
+            test_fun();
+            break;
+        case state6:
+            //TBD bounes
             break;
 	}
   }

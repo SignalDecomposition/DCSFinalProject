@@ -12,6 +12,7 @@ extern unsigned int REdge, FEdge;
 extern unsigned int count, index;
 extern unsigned char first;
 extern char char_array[4];
+extern char  angle_string[5];
 extern int adcVal[4];
 extern int LIDARarr [2][50];
 
