@@ -32,12 +32,36 @@ def main():
             if inChar == '8':
                 print(menu)
             elif inChar == '1' :
+                time.sleep(0.25) 
+                while s.in_waiting > 0 :
+                    lox = s.read_until(expected='\n')
+                time.sleep(0.25)     
                 bytesChar = bytes(inChar, 'ascii')
                 s.write(bytesChar)
-                x = input("Enter max masking: ")
-                bytesChar = bytes(x + '\n', 'ascii')
-                s.write(bytesChar)
-                time.sleep(0.25)  # delay for accurate read/write operations on both ends
+                
+                #while s.out_waiting != 0:
+                    #pass                
+                    #print("hello")
+                #x = input("Enter max masking: ")
+                #bytesChar = bytes(x + '\n', 'ascii')
+                #s.write(bytesChar)
+                #time.sleep(0.25)  # delay for accurate read/write operations on both ends
+                try:
+                   angle = 0
+                   while(1):
+                        angle_in = receive_bytes(s,2)
+                        angle = int.from_bytes(angle_in,"little")
+                        b = receive_bytes(s,2)
+                        range = int.from_bytes(b ,"little")*0.13216
+                        # Print the received integer
+                        print("Angle is: ", angle)
+                        print("Range is [cm]:: ", range)
+                except KeyboardInterrupt:
+                    s.reset_input_buffer()
+                    pass
+                print('Done!')
+
+
             elif inChar == '3' :
                 bytesChar = bytes(inChar, 'ascii')
                 s.write(bytesChar)
@@ -80,8 +104,11 @@ def main():
                         print("a is: ", a)
                         print("b is: ", b)
                 except KeyboardInterrupt:
-                    s.reset_input_buffer()
                     pass
+                inChar = '0'
+                bytesChar = bytes(inChar, 'ascii')
+                s.write(bytesChar)
+                
             elif inChar == '6' or inChar == '9' or inChar == '4':
                 Send_cahr(s,inChar)
            
