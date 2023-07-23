@@ -125,7 +125,8 @@ void to_char(unsigned int t){
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer0_A0_ISR (void)
 {
-    if(count < 3){
+    //was: count < 3
+    if(count < 50){
         count = count + 1;
     }else{
         count = 0;

@@ -9,14 +9,28 @@ void Telemeter(unsigned int angle){
     steps = (angle >> 3) -1;
     ObjectsDetectorSystem(steps);
 }
+// Qformat angle
+int QFangle(int angle_in){
+    int timer_out;
+    long temp_angle;
+    long mult_QF = 1216;//9.5*2^7
+    temp_angle = mult_QF*((long)angle_in);
+    temp_angle = temp_angle >> 7;
+    timer_out = (int)temp_angle;
+    return timer_out;
+
+}
 
 
 void ObjectsDetectorSystem(unsigned int steps){
-    unsigned int j = 0, max = 450;
+    unsigned int j = 0, max = 35;//450 original
     unsigned int dist, angle;
     unsigned char char_angle;
-    Enable_SERVO(79);
+    int true_angle;
+    int mult_step;
+    Enable_SERVO(460);
     enterLPM(lpm_mode);
+    mult_step = 180/steps;
     if (char_array[0] != 0){
         max = (char_array[2]+'0')*100 + (char_array[1]+'0')*10 + (char_array[0]+'0');
         char_array[0] = '\0';
@@ -27,11 +41,16 @@ void ObjectsDetectorSystem(unsigned int steps){
     while(state == state1){
 
         for (j = 0 ; j <= steps ; j++){
-            angle = arr[j];
+            true_angle = j*mult_step;
+            angle = QFangle(true_angle);
+            lcd_home();
 
-            Enable_SERVO(angle);
+
+            Enable_SERVO(angle + 460);
             Enable_TRIGGER();
             Enable_ECHO();
+
+            printIntToLCD(true_angle);//P1.0 LIDAR1
             enterLPM(lpm_mode);
             Disable_ECHO();
             Disable_TRIGGER();
@@ -47,6 +66,10 @@ void ObjectsDetectorSystem(unsigned int steps){
                 if (17 < dist && dist < max)
                     char_angle = dist;
             }
+
+            lcd_new_line;
+            printIntToLCD(dist);//P1.3 LIDAR2
+
         }
         Disable_SERVO();
         state = state0;
