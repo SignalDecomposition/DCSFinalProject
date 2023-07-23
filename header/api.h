@@ -9,7 +9,7 @@ extern void LIDR();
 extern void LIDR_test();
 extern void LIDR_Clib();
 extern void printIntToLCD(unsigned int temp);
-extern int  QFangle(int angle_in);
+extern unsigned int  QFangle(unsigned int angle_in);
 #endif
 
 

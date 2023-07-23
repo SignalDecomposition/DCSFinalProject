@@ -68,7 +68,7 @@ void Enable_TRIGGER(){
 void Disable_TRIGGER(){
 
     TA1CCR1 = 0;
-    TA1CTL |= MC_0;
+    //TA1CTL &= ~MC_1;
 }
 
 void Enable_ECHO(){
@@ -80,7 +80,7 @@ void Enable_ECHO(){
 
 void Disable_ECHO(){
 
-    TA1CCTL2 &= ~CCIE;
+    //TA1CCTL2 &= ~CCIE;
 }
 
 void Enable_SERVO(unsigned int t){
@@ -92,9 +92,9 @@ void Enable_SERVO(unsigned int t){
 }
 
 void Disable_SERVO(){
-    TA0CTL |= MC_0;
+    TA0CTL &= ~MC_1;
     TA0CCTL0 &= ~CCIE;
-    TA0CCR1 = 0;
+    //TA0CCR1 = 0;
 
 
 }
@@ -145,7 +145,7 @@ void to_char(unsigned int t){
 __interrupt void Timer0_A0_ISR (void)
 {
     //was: count < 50
-    if(count < 30){
+    if(count < 20){
         count = count + 1;
     }else{
         count = 0;
@@ -160,15 +160,16 @@ __interrupt void Timer1_A1_ISR (void)
     switch(__even_in_range(TA1IV,0x0A)){
 
         case  TA1IV_TACCR2:
-            if (TA1CCTL2 & CCI){
+            if (TA1CCTL2 & CCI && count > 5){
                 REdge = TA1CCR2;
                 first = 0x1;
             }
             else if(first) {
                 FEdge = TA1CCR2;
                 TA1CCTL2 &= ~CCIE;
+                TA1CTL &= ~MC_1;
                 first = 0x0;
-                LPM0_EXIT;   // Exit LPM0
+                //LPM0_EXIT;   // Exit LPM0
             }
             break;
 
@@ -229,6 +230,7 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
   else if (UCA0RXBUF == '1'){
       state = state1;
       index = 0;
+      LPM0_EXIT;
   }
   else if (UCA0RXBUF == '2'){
       state = state2;

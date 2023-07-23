@@ -69,7 +69,7 @@ def receive_bytes(s, num_bytes):
     bytes from MSP430
     """
 
-    while s.out_waiting != 0 :
+    while s.in_waiting == 0 :
         pass
     bytes_in = s.read(num_bytes)
     #time.sleep(0.25)
