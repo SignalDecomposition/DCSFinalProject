@@ -5,7 +5,9 @@
 unsigned int REdge = 0,FEdge = 0;
 unsigned int count = 0, index = 0;
 unsigned char first = 0x0;
+int first_time = 0;
 char char_array[4] = {'\0','\0','\0','\0'};
+char angle_string[5];
 int adcVal[4];
 int LIDARarr [2][50];
 
@@ -90,10 +92,10 @@ void Enable_SERVO(unsigned int t){
 }
 
 void Disable_SERVO(){
-
-    TA0CCR1 = 0;
     TA0CTL |= MC_0;
     TA0CCTL0 &= ~CCIE;
+    TA0CCR1 = 0;
+
 
 }
 
@@ -106,27 +108,44 @@ void ADC_enable(){
     ADC10AE0 |= 0x09;   //BIT3 + BIT0; // input enable A3, A0
 }
 
+void transmite_UART(int size_tran){
+
+    while(index < size_tran ){
+
+        while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+        UCA0TXBUF = char_array[index];
+        index++;
+
+    }
+
+       index = 0;
+
+}
+
 void ADC_touch(){
     while (ADC10CTL1 & ADC10BUSY);               // Wait if ADC10 core is active
     ADC10SA = (int)adcVal;
-    ADC10CTL0 |= ENC + ADC10SC;             // Enable conversion, Sampling and conversion start
+    ADC10CTL0 |= ENC + ADC10SC;      // Enable conversion, Sampling and conversion start
     enterLPM(lpm_mode);             // LPM0, ADC10_ISR will force exit
     ADC10CTL0 &= ~ADC10SC;
 
 }
 
 void to_char(unsigned int t){
-
-    char_array[0] = t & 0xFF;
-    char_array[1] = (t >> 8) & 0xFF;
-
+    if(t < 256){
+        char_array[0] = t & 0xFF;
+        char_array[1] = 0x00;
+    }else{
+        char_array[0] = t & 0xFF;
+        char_array[1] = (t >> 8) & 0xFF;
+    }
 }
 
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer0_A0_ISR (void)
 {
-    //was: count < 3
-    if(count < 50){
+    //was: count < 50
+    if(count < 30){
         count = count + 1;
     }else{
         count = 0;
@@ -149,6 +168,7 @@ __interrupt void Timer1_A1_ISR (void)
                 FEdge = TA1CCR2;
                 TA1CCTL2 &= ~CCIE;
                 first = 0x0;
+                LPM0_EXIT;   // Exit LPM0
             }
             break;
 
@@ -179,7 +199,7 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
 #error Compiler not supported!
 #endif
 {
-  while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
+  //while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
   if (state == state1){
       char_array[index] = UCA0RXBUF;
       index++;
@@ -192,6 +212,20 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
       REdge = UCA0RXBUF;
       IE2 |= UCA0TXIE;
   }
+  else if (state == state4 && first_time){
+
+        angle_string[index] = UCA0RXBUF;
+        index++;
+        if (angle_string[index-1] == '\n'){
+            first_time = 0;
+            index = 0;
+            LPM0_EXIT;
+        }
+    }
+  else if (UCA0RXBUF == '0'){
+      state = state0;
+
+    }
   else if (UCA0RXBUF == '1'){
       state = state1;
       index = 0;
@@ -205,6 +239,15 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
       UCA0TXBUF = '3';
       LPM0_EXIT;
   }
+  else if (UCA0RXBUF == '4'){
+       state = state4;
+       first_time = 1;
+       LPM0_EXIT;
+  }
+  else if (UCA0RXBUF == '5'){
+         state = state5;
+         LPM0_EXIT;
+    }
 
 
 }
@@ -223,6 +266,7 @@ void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI0TX_ISR (void)
         UCA0TXBUF = char_array[index];
         index++;
     }
+
     index = 0;
     IE2 &= ~UCA0TXIE;                       // Disable USCI_A0 TX interrupt
     LPM0_EXIT;

@@ -3,7 +3,7 @@
 
 #include  "../header/halGPIO.h"     // private library - HAL layer
 
-extern void Telemeter(unsigned int angle);
+extern void Telemeter();
 extern void ObjectsDetectorSystem(unsigned int steps);
 extern void LIDR();
 extern void LIDR_test();
