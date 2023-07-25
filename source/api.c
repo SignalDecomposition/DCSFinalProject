@@ -1,8 +1,7 @@
 #include  "../header/api.h"    		// private library - API layer
 #include  "../header/halGPIO.h"     // private library - HAL layer
 
-//T_on = 2^17 * (1.55m + 0.6m * arctan(10k*2.5m*angle/180 -2*pi))
-unsigned int arr[21] = {79,80,82,84,86,90,94,102,113,133,168,214,248,268,283,294,301,306,309,311,313};
+
 
 int conv_str_to_int(char* array){
     int i_arr = 0;
@@ -93,11 +92,11 @@ int get_sonic_range(){
 // Qformat angle
 unsigned int QFangle(unsigned int angle_in){
     unsigned int timer_out;
-    unsigned int temp_angle;
-    unsigned int mult_QF = 19;//9.5*2^7
-    temp_angle = mult_QF*(angle_in);
-    temp_angle = temp_angle >> 1;
-    timer_out = temp_angle;
+    long temp_angle;
+    unsigned int mult_QF = 1200;//9.5*2^7
+    temp_angle = ((long)mult_QF)*((long)angle_in);
+    temp_angle = temp_angle >> 7;
+    timer_out = (int)temp_angle;
     return timer_out;
 
 }
@@ -113,7 +112,7 @@ void ObjectsDetectorSystem(unsigned int steps){
     lcd_clear();
     lcd_home();
 
-    Enable_SERVO(460);
+    Enable_SERVO(450);
     enterLPM(lpm_mode);
     enterLPM(lpm_mode);
     mult_step = 180/steps;
@@ -134,7 +133,7 @@ void ObjectsDetectorSystem(unsigned int steps){
             true_angle = j*mult_step;
             angle = QFangle(true_angle);
 
-            Enable_SERVO(angle + 460);
+            Enable_SERVO(angle + 450);
             Enable_TRIGGER();
             Enable_ECHO();
 
@@ -230,60 +229,114 @@ void LIDR(){
     }
 }
 
-void LIDR_test(){
-    Enable_SERVO(460); // 90 degres
+void LDR_Scan(unsigned int steps){
+    //int adc_V1 ,adc_V2 ;
+    int ii;
+    int j;
+    int mult_step;
+    int true_angle;
+    int angle;
+    Enable_SERVO(450); // 90 degres
     enterLPM(lpm_mode);
     Disable_SERVO();
-    int adc_V1 ,adc_V2 ;
-    int ii;
+
+    Enable_SERVO(450);
+    enterLPM(lpm_mode);
+    enterLPM(lpm_mode);
+    mult_step = 180/steps;
+
     while(state == state2){
         adc_V1 = 0;
         adc_V2 = 0;
 
-        for(ii = 0; ii< 4; ii++){
+        for (j = 0 ; j <= steps ; j++){
+            adc_V1 = 0;
+            adc_V2 = 0;
+
+            true_angle = j*mult_step;
+            angle = QFangle(true_angle);
+
+            Enable_SERVO(angle + 450);
+            //Enable_SERVO(1315);
+            //for(ii = 0; ii< 4; ii++){
             ADC_enable();
             ADC_touch();
-            adc_V1 +=adcVal[3];//P1.0 LIDAR1
-            adc_V2 +=adcVal[0];//P1.3 LIDAR2
-        }
-        adc_V1 = adc_V1 >> 2;
-        adc_V2 = adc_V2 >> 2;
-        //ADC_enable();
-        //ADC_touch();
-        lcd_home();
-        printIntToLCD(adc_V1);//P1.0 LIDAR1
-        lcd_new_line;
-        printIntToLCD(adc_V2);//P1.3 LIDAR2
-        to_char(adc_V1);
-        transmite_UART(2);
-        to_char(adc_V2);
-        transmite_UART(2);
+            //adc_V1 +=adcVal[3];//P1.0 LIDAR1
+            //adc_V2 +=adcVal[0];//P1.3 LIDAR2
+            //}
+            enterLPM(lpm_mode);
+            adc_V1 = adc_V1 >> 2;
+            adc_V2 = adc_V2  >> 2;
+
+            lcd_home();
+            printIntToLCD(count_LDR);//P1.0 LIDAR1
+            lcd_new_line;
+            printIntToLCD(adc_V2);//P1.3 LIDAR2
+
+            to_char(true_angle);
+            transmite_UART(2);
+
+            to_char(adc_V1);
+            transmite_UART(2);
+            to_char(adc_V2);
+            transmite_UART(2);
+
     }
-    char_array[0] = '\0';
-    char_array[1] = '\0';
-    char_array[2] = '\0';
-    char_array[3] = '\0';
+
+    adc_V1 = 0;
+    adc_V2 = 0;
+    state = state0;
+    }
+
 
 }//LIDR_test
 
 void LIDR_Clib(){
 
     int i = 0;
-    while(i < 50 ){
-        i = i + 1000;
-        lcd_home();
-        printIntToLCD(i);
-        to_char(i);
-        enterLPM(lpm_mode);
+    int ii;
+
+    Enable_SERVO(1315); // 90 degres
+    enterLPM(lpm_mode);
+    Disable_SERVO();
+
+
+    //get 9 values
+    for(i=0;i<10;i++ ){
+        adc_V1 = 0;
+        adc_V2 = 0;
+
         ADC_enable();
         ADC_touch();
+        //wait for servo button
+        enterLPM(lpm_mode);
 
-        //LIDARarr[0][i-1] = adcVal[3];//P1.0 LIDAR1
-        //LIDARarr[1][i-1] = adcVal[0];//P1.3 LIDAR2
+        // get values from LDR
+        /*for(ii = 0; ii< 4; ii++){
+            ADC_enable();
+            ADC_touch();
+            adc_V1 +=adcVal[3];//P1.0 LIDAR1
+            adc_V2 +=adcVal[0];//P1.3 LIDAR2
+        }*/
+        adc_V1 = adc_V1 >> 2;
+        adc_V2 = adc_V2 >> 2;
+
+        lcd_home();
+        printIntToLCD(adc_V1);//P1.0 LIDAR1
+        lcd_new_line;
+        printIntToLCD(adc_V2);//P1.3 LIDAR2
+
+        to_char(adc_V1);
+        transmite_UART(2);
+        to_char(adc_V2);
+        transmite_UART(2);
+
+
     }
-    i = 0;
-    //Send_Clib();
-    //enterLPM(lpm_mode);
+
+    adc_V1 = 0;
+    adc_V2 = 0;
+
     state = state0;
     lcd_home();
     lcd_clear();
@@ -306,13 +359,23 @@ void printIntToLCD(unsigned int temp){
 }
 
 void test_fun(){
-    int a = 1023;
+    int a = 0;
     int b = 1000;
-    to_char(a);
-    transmite_UART(2);
-    to_char(b);
-    transmite_UART(2);
+    Enable_SERVO(450); // 90 degres
     enterLPM(lpm_mode);
+    Disable_SERVO();
+
+    Enable_SERVO(1315); // 90 degres
+    enterLPM(lpm_mode);
+    Disable_SERVO();
+    Enable_SERVO(2140); // 90 degres
+    enterLPM(lpm_mode);
+    Disable_SERVO();
+
+
+
+
+
 
 }
 

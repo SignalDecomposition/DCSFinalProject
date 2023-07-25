@@ -22,12 +22,13 @@ def Telemeter(s):
             while s.in_waiting != 0 :
                 bytes_in = s.read(2)
             time.sleep(0.25)
-            range = int.from_bytes(bytes_in,"little")*0.132160
+            dist = int.from_bytes(bytes_in,"little")*0.132160
             # Print the received integer
-            print("range is [cm]: %.2f" % range)
+            print("range is [cm]: %.2f" % dist)
     except KeyboardInterrupt:
         s.reset_input_buffer()
         pass
+
     #state = 0 
     inChar = '0'
     bytesChar = bytes(inChar, 'ascii')
@@ -75,3 +76,12 @@ def receive_bytes(s, num_bytes):
     #time.sleep(0.25)
 
     return bytes_in
+
+# Function to find the maximum difference between columns
+def max_difference_between_columns(arr):
+    max_diff = 0
+    for col in range(len(arr[0])):
+        for row in range(len(arr) - 1):
+            diff = abs(arr[row][col] - arr[row + 1][col])
+            max_diff = max(max_diff, diff)
+    return max_diff

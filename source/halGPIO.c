@@ -6,10 +6,13 @@ unsigned int REdge = 0,FEdge = 0;
 unsigned int count = 0, index = 0;
 unsigned char first = 0x0;
 int first_time = 0;
+int flag_LDR = 0;
 char char_array[4] = {'\0','\0','\0','\0'};
 char angle_string[5];
 int adcVal[4];
-int LIDARarr [2][50];
+int adc_V1 ,adc_V2 ;
+int count_LDR = 0;
+
 
 
 //--------------------------------------------------------------------
@@ -126,8 +129,10 @@ void ADC_touch(){
     while (ADC10CTL1 & ADC10BUSY);               // Wait if ADC10 core is active
     ADC10SA = (int)adcVal;
     ADC10CTL0 |= ENC + ADC10SC;      // Enable conversion, Sampling and conversion start
-    enterLPM(lpm_mode);             // LPM0, ADC10_ISR will force exit
-    ADC10CTL0 &= ~ADC10SC;
+
+    //enterLPM(lpm_mode);             // LPM0, ADC10_ISR will force exit
+
+    //ADC10CTL0 &= ~ADC10SC;
 
 }
 
@@ -144,7 +149,7 @@ void to_char(unsigned int t){
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer0_A0_ISR (void)
 {
-    //was: count < 50
+    //was: count < 20
     if(count < 20){
         count = count + 1;
     }else{
@@ -184,9 +189,21 @@ __interrupt void Timer1_A1_ISR (void)
 __interrupt void ADC10_ISR(void)
 
 {
-    ADC10CTL0 &= ~ENC;
-    ADC10CTL0 &= ~ADC10ON;
-    LPM0_EXIT;      // Clear CPUOFF bit from 0(SR)
+    if(count_LDR < 4){
+        adc_V1 +=adcVal[3];//P1.0 LIDAR1
+        adc_V2 +=adcVal[0];//P1.3 LIDAR2
+        ADC10SA = (int)adcVal;
+        ADC10CTL0 |= ENC + ADC10SC;
+        count_LDR++;
+    }
+    else{
+        ADC10CTL0 &= ~ENC;
+        ADC10CTL0 &= ~ADC10ON;
+        //LPM0_EXIT;      // Clear CPUOFF bit from 0(SR)
+        ADC10CTL0 &= ~ADC10SC;
+        count_LDR = 0;
+
+    }
 }
 
 
@@ -210,8 +227,12 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
       }
   }
   else if (state == state3){
-      REdge = UCA0RXBUF;
-      IE2 |= UCA0TXIE;
+
+      //to clear interupt
+      char_array[0] = UCA0RXBUF;
+      //exit sleep mode
+      LPM0_EXIT;
+
   }
   else if (state == state4 && first_time){
 
@@ -238,7 +259,6 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
   }
   else if (UCA0RXBUF == '3'){
       state = state3;
-      UCA0TXBUF = '3';
       LPM0_EXIT;
   }
   else if (UCA0RXBUF == '4'){
@@ -272,5 +292,26 @@ void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI0TX_ISR (void)
     index = 0;
     IE2 &= ~UCA0TXIE;                       // Disable USCI_A0 TX interrupt
     LPM0_EXIT;
+}
+
+//*********************************************************************
+//            Port2 Interrupt Service Rotine
+//*********************************************************************
+#pragma vector = PORT2_VECTOR
+__interrupt void PBs_handler(void){
+
+    delay(debounceVal);
+//---------------------------------------------------------------------
+//            selector of transition between states
+//---------------------------------------------------------------------
+    if(PBsArrIntPend & PB0){
+
+      if(state == state3){
+          LPM0_EXIT;
+        }
+      PBsArrIntPend &= ~PB0;
+
+    }
+
 }
 
