@@ -32,7 +32,8 @@
 #define infomation_seg_B 0x1080
 #define seg_length 0x0032
 
-unsigned char i = 0x00, bla;
+int j = 0, i = 0, k;
+char string1[31];
 
 struct FileSystem{
     int  FilesCount;
@@ -50,7 +51,7 @@ void read_data(int adress)
 
   Flash_ptr = (char *)adress;               // Initialize Flash pointer
 
-  if (*Flash_ptr == 1)                       // test value in adress
+  if (*Flash_ptr == 0)                       // test value in adress
       P2OUT |= BIT1;
 
 }
@@ -150,11 +151,16 @@ void main(void)
   erase_segment(infomation_seg_A);          // Erase flash Information A and B
   while(1){
       _BIS_SR(LPM0_bits + GIE);                 // Enter LPM3 w/ interrupt
-      write_char_flash(infomation_seg_A + i,bla);
-      i++;
-      if (i == 5)
+      for (k = i; k < i+j; k++ ){
+          write_char_flash(infomation_seg_A + k,string1[k-i]);
+      }
+      i = i+j;
+      j = 0;
+      if (string1[0] == 0x00 && string1[1] == 0x08)
           break;
   }
+
+  read_data(infomation_seg_A+1);
 
   while(1){
       _NOP();
@@ -162,28 +168,6 @@ void main(void)
 
 
  /*
-  erase_segment(infomation_seg_B);
-
-  i = 1;
-  write_char_flash(infomation_seg_A,i);
-
-  for(i = 0; i< seg_length; i++)            // write information A with byte data
-  {
-  	write_char_flash(infomation_seg_A + i,i);
-  }
-  
-
-  for(i = 0; i< seg_length; i = i + 2)      // write information B with word data
-  {
-  	write_int_flash(infomation_seg_B + i,i);
-  }
-
-
-  P2OUT ^= 0x02;                                        // Toogle P2.1
-  erase_segment(infomation_seg_B);                      // Erase again Information B
-  copy_seg_flash(infomation_seg_A, infomation_seg_B);	// copy contents from Information A to Information B
-  P2OUT ^= 0x02;                                        // Toogle P2.1
-
 
   struct FileSystem f;
   f.FilesCount = 1;
@@ -197,9 +181,15 @@ void main(void)
 #pragma vector=USART1RX_VECTOR
 __interrupt void USART1_rx (void)
 {
-  TXBUF1 = RXBUF1;                          // RXBUF1 to TXBUF1
-  bla = RXBUF1;
-  P2OUT ^= 0x02;
-  _BIC_SR_IRQ(LPM0_bits);                   // Clear LPM3 bits from 0(SR)
+  if (RXBUF1 == '\n'){
+      TXBUF1 = '1';     // RXBUF1 to TXBUF1
+      _BIC_SR_IRQ(LPM0_bits);                   // Clear LPM3 bits from 0(SR)
+  }
+  else{
+      string1[j] = RXBUF1 - '0';
+      if (string1[j] > 9)
+          string1[j] = string1[j] - 39;
+      j++;
+  }
 }
 
