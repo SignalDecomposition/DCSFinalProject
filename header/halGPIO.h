@@ -15,7 +15,8 @@ extern char char_array[4];
 extern char  angle_string[5];
 extern int adcVal[4];
 extern int LIDARarr [2][50];
-
+extern int count_LDR;
+extern int adc_V1 ,adc_V2 ;
 
 extern void sysConfig(void);
 extern void delay(unsigned int);

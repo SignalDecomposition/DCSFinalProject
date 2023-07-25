@@ -6,7 +6,7 @@
 extern void Telemeter();
 extern void ObjectsDetectorSystem(unsigned int steps);
 extern void LIDR();
-extern void LIDR_test();
+extern void LDR_Scan(unsigned int steps);
 extern void LIDR_Clib();
 extern void printIntToLCD(unsigned int temp);
 extern unsigned int  QFangle(unsigned int angle_in);

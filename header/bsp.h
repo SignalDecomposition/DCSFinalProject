@@ -4,7 +4,7 @@
 #include  <msp430g2553.h>          // MSP430x2xx
 
 
-#define   debounceVal      250
+#define   debounceVal      1000     //500     //250
 #define   LEDs_SHOW_RATE   0xFFFF  // 62_5ms
 
 #define LCD_port2_Sel      P2SEL

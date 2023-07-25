@@ -14,9 +14,9 @@ void GPIOconfig(void){
     PBsArrIntPend &= ~0x01;
 
     // TEST BIT
-    P2SEL &= ~BIT7;
-    P2DIR |= BIT7;
-    P2OUT &= ~BIT7;
+    P2SEL &= ~BIT0;
+    P2DIR |= BIT0;
+    P2OUT &= ~BIT0;
 
 
     //TRRIGER setup
