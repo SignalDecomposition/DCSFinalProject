@@ -1,91 +1,72 @@
 import serial as ser
 import time
 
-menu = """                                   Menu
-            1. Blink RGB LED, color by color with delay of X[ms]
-            2. Count up onto LCD screen with delay of X[ms]
-            3. Circular tone series via Buzzer with delay of X[ms]
-            4. Get delay time X[ms]:
-            5. LDR 3-digit value [v] onto LCD
-            6. Clear LCD screen
-            7. I love my Negev
-            8. Show menu
-            9. Sleep
-           """
+def ScriptToHEX():
+    with open("Script0.txt", 'r') as script:
+        commands = script.readlines()
+
+    """
+        convert each command to be a list
+    """
+    for i in range(len(commands)):
+        commands[i] = commands[i].split()
+        for j in commands[i]:
+            if ',' in j:
+                temp = j.split(',')
+                commands[i].remove(j)
+                for k in temp:
+                    commands[i].append(k)
+
+    """ 
+        Convert each command to HEX
+    """
+    HEXlist = []
+    OPcode = {"inc_lcd": 1, "dec_lcd": 2, "rra_lcd": 3, "set_delay": 4, "clear_lcd": 5,
+              "servo_deg": 6, "servo_scan": 7, "sleep": 8}
+
+    for command in commands:
+        temp = '\\x' +  format(OPcode[command[0]], '02x')
+        for param in command[1:]:
+            temp = ''.join([temp, format(int(param), '02x')])
+
+        HEXlist.append(temp)
+
+    return HEXlist
 
 
 def main():
-    s = ser.Serial('COM6', baudrate=9600, bytesize=ser.EIGHTBITS,
-                   parity=ser.PARITY_NONE, stopbits=ser.STOPBITS_ONE,
-                   timeout=1)  # timeout of 1 sec where the read and write operations are blocking,
-    # after the timeout the program continues
-    print(menu)
-    arr = [0,0,0]
-    i=0
-    # clear buffers
-    s.reset_input_buffer()
-    s.reset_output_buffer()
+    """ Establish communication """
     while (1):
-        while s.out_waiting == 0:
-            inChar = input("Enter char: ")
-            if inChar == '8':
-                print(menu)
-            elif inChar == '1' :
-                bytesChar = bytes(inChar, 'ascii')
-                s.write(bytesChar)
-                x = input("Enter max masking: ")
-                bytesChar = bytes(x + '\n', 'ascii')
-                s.write(bytesChar)
-                time.sleep(0.25)  # delay for accurate read/write operations on both ends
-            elif inChar == '3' :
-                bytesChar = bytes(inChar, 'ascii')
-                s.write(bytesChar)
-                dist = 5
-                while s.out_waiting != 0:
-                    pass
-                while s.in_waiting == 0:
-                    pass
-                while s.in_waiting != 0:
-                    bytes_in = s.read(1)
-                print(str(bytes_in))
-                while dist <= 50:
-                    print("press any key to contiue")
-                    inChar = input()
-                    bytesChar = bytes(inChar, 'ascii')
-                    s.write(bytesChar)
-                    while s.out_waiting != 0 :
-                        pass
-                    while s.in_waiting == 0 :
-                        pass
-                    while s.in_waiting != 0 :
-                        bytes_in = s.read(2)
-                    print(int.from_bytes(bytes_in,"little"))
-                    print("Calibration at "+str(dist)+" cm")
-                    if dist == 50 :
-                        break
-            elif inChar == '2' or  inChar == '5' or inChar == '6' or inChar == '9':
-                bytesChar = bytes(inChar, 'ascii')
-                s.write(bytesChar)
-            elif inChar == '4':
-                bytesChar = bytes(inChar, 'ascii')
-                s.write(bytesChar)
-                while s.out_waiting != 0:
-                    pass
-                x = input("Enter new X: ")
-                bytesChar = bytes(x + '\n', 'ascii')
-                s.write(bytesChar)
-                time.sleep(0.25)  # delay for accurate read/write operations on both ends
+        try :
+            s = ser.Serial('COM1', baudrate=9600, bytesize=ser.EIGHTBITS,
+                           parity=ser.PARITY_NONE, stopbits=ser.STOPBITS_ONE,
+                           timeout=1)
+                            # timeout of 1 sec so that the read and write operations are blocking,
+                            # when the timeout expires the program will continue
+            # clear buffers
+            s.reset_input_buffer()
+            s.reset_output_buffer()
 
-            elif inChar == '7':
-                bytesChar = bytes(inChar, 'ascii')
-                s.write(bytesChar)
-                time.sleep(0.25)  # delay for accurate read/write operations on both ends
-                while (s.in_waiting > 0):  # while the input buffer isn't empty
-                    line = s.read()
-                    # readline() can also be used if the terminator is '\n'
-                    print(line.decode("ascii"))
-            else:
-                print("WRONG INPUT, TRY AGAIN")
+        except ser.SerialTimeoutException:
+            print("TRYING AGAIN")
+        finally:
+            print(s.read())
+            break
+
+    while(1):
+        x = input("NO FEAR")
+        x = ScriptToHEX()
+        for i in x:
+            print(i)
+            bytetxMsg = bytes(i[2:]+'\n','ascii')
+            s.write(bytetxMsg)
+            time.sleep(0.25)  # delay for accurate read/write operations on both ends
+            while (s.out_waiting > 0 ):
+                pass
+            while (s.in_waiting == 0 ):
+                pass
+            print(s.read())
+
 
 
 if __name__ == '__main__':
