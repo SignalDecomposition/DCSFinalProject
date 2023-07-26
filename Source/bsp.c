@@ -71,11 +71,8 @@ void TIMERconfig(void){
     TA1CCR0 = 8650;
     TA1CCTL1 |= OUTMOD_7; // Reset-Set mode
 
-
     // ECHO Config
     TA1CCTL2 |= CAP + CM_3 + SCS + CCIS_1;
-
-
 
 
 } 

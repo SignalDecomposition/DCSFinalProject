@@ -29,12 +29,15 @@ extern void Disable_TRIGGER();
 extern void Enable_SERVO(unsigned int t);
 extern void Disable_SERVO();
 extern void Enable_ECHO();
-extern void Disable_ECHO();
 extern void ADC_enable();
 extern void ADC_touch();
 extern void to_char(unsigned int t);
 extern void write_char_flash(int adress, char value);
 extern void erase_segment(int adress);
+extern char read_data(int adress);
+extern void Enable_DelayLCD();
+extern void Disable_DelayLCD();
+extern void transmite_UART(int size_tran);
 
 extern __interrupt void Timer0_A0_ISR (void);
 extern __interrupt void Timer1_A1_ISR (void);

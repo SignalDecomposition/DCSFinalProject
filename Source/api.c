@@ -2,6 +2,7 @@
 #include  "../header/halGPIO.h"     // private library - HAL layer
 
 struct FileSystem f;
+unsigned char d = 0x32;
 
 int conv_str_to_int(char* array){
     int i_arr = 0;
@@ -13,27 +14,30 @@ int conv_str_to_int(char* array){
 
     return value;
 }
-void Telemeter(){
+void Telemeter(int x){
 
-    unsigned int angle;
     int cycles_in;
     int angle_in;
-    int angle_true;
-    //white to send index
+
+    //wait to send index
+    if (state == state4){
     enterLPM(lpm_mode);
+    angle_in = conv_str_to_int(angle_string);
+    }
+    else{
+        angle_in = x;
+    }
 
     lcd_clear();
     lcd_home();
-    angle_in = conv_str_to_int(angle_string);
     printIntToLCD(angle_in);
 
     Enable_SERVO(QFangle(angle_in) + 460);
 
-    while(state == state4){
+    while(state == state4 || state == state6){
         Enable_TRIGGER();
         Enable_ECHO();
         enterLPM(lpm_mode);
-        //Disable_ECHO();
         Disable_TRIGGER();
 
         if(REdge != 0 || FEdge != 0){
@@ -42,13 +46,11 @@ void Telemeter(){
 
            if (FEdge < REdge){
                cycles_in = REdge - FEdge;
-               //dist = (FEdge - REdge) << 3;
            }
         }
-        //cycles_in = get_sonic_range();
+
         to_char(cycles_in);
         transmite_UART(2);
-
 
         lcd_home();
         lcd_new_line;
@@ -58,7 +60,6 @@ void Telemeter(){
     Disable_SERVO();
     lcd_clear();
     lcd_home();
-
 }
 
 
@@ -67,8 +68,6 @@ int get_sonic_range(){
     //range from 2cm to 450cm
     unsigned int range_US;
     int i;
-    // for 25 C room temputre
-    unsigned int speed_sound = 34645;
 
     Enable_TRIGGER();
     Enable_ECHO();
@@ -79,7 +78,7 @@ int get_sonic_range(){
         range_US += FEdge - REdge;
     }
     range_US = range_US >> 2;
-    Disable_ECHO();
+
     Disable_TRIGGER();
 
     return range_US;
@@ -98,20 +97,24 @@ unsigned int QFangle(unsigned int angle_in){
 }
 
 
-void ObjectsDetectorSystem(unsigned int steps){
+void ObjectsDetectorSystem(int l, int r){
     unsigned int j = 0, max = 35;//450 original
     unsigned int dist, angle;
-    unsigned char char_angle;
     unsigned int true_angle;
-    int mult_step;
+    unsigned int steps;
 
     lcd_clear();
     lcd_home();
 
     Enable_SERVO(450);
     enterLPM(lpm_mode);
-    enterLPM(lpm_mode);
-    mult_step = 180/steps;
+    steps = (r-l)/3;
+
+    if(state == state6){
+        to_char(r);
+        transmite_UART(2);
+    }
+
     /*
     if (char_array[0] != 0){
         max = (char_array[2]+'0')*100 + (char_array[1]+'0')*10 + (char_array[0]+'0');
@@ -121,12 +124,11 @@ void ObjectsDetectorSystem(unsigned int steps){
         char_array[3] = '\0';
     }
     */
-    while(state == state1){
-
+    while(state == state1 || state == state6){
         for (j = 0 ; j <= steps ; j++){
             REdge = 0;
             FEdge = 0;
-            true_angle = j*mult_step;
+            true_angle = l + 3*j;
             angle = QFangle(true_angle);
 
             Enable_SERVO(angle + 450);
@@ -136,7 +138,6 @@ void ObjectsDetectorSystem(unsigned int steps){
             lcd_home();
             printIntToLCD(true_angle);//P1.0 LIDAR1
             enterLPM(lpm_mode);
-            //Disable_ECHO();
             Disable_TRIGGER();
 
             if(REdge != 0 || FEdge != 0){
@@ -145,7 +146,6 @@ void ObjectsDetectorSystem(unsigned int steps){
 
                 if (FEdge < REdge){
                     dist = REdge - FEdge;
-                    //dist = (FEdge - REdge) << 3;
                 }
             }
             to_char(true_angle);
@@ -168,8 +168,7 @@ void LIDR(){
     char prevADC[6] = {'\0'}, ADC[6];
     long values[32];
     int i, flag = 0;
-    int Q_fromat = 7; //2^7
-    long SMA = 0, temp, mult = 32 ;
+    long SMA = 0, temp;
     int count_ADC = 0;
     long Qformat_val;
     long B;
@@ -226,19 +225,15 @@ void LIDR(){
 }
 
 void LDR_Scan(unsigned int steps){
-    //int adc_V1 ,adc_V2 ;
-    int ii;
     int j;
     int mult_step;
     int true_angle;
     int angle;
+
     Enable_SERVO(450); // 90 degres
     enterLPM(lpm_mode);
     Disable_SERVO();
 
-    Enable_SERVO(450);
-    enterLPM(lpm_mode);
-    enterLPM(lpm_mode);
     mult_step = 180/steps;
 
     while(state == state2){
@@ -253,13 +248,9 @@ void LDR_Scan(unsigned int steps){
             angle = QFangle(true_angle);
 
             Enable_SERVO(angle + 450);
-            //Enable_SERVO(1315);
-            //for(ii = 0; ii< 4; ii++){
             ADC_enable();
             ADC_touch();
-            //adc_V1 +=adcVal[3];//P1.0 LIDAR1
-            //adc_V2 +=adcVal[0];//P1.3 LIDAR2
-            //}
+
             enterLPM(lpm_mode);
             adc_V1 = adc_V1 >> 2;
             adc_V2 = adc_V2  >> 2;
@@ -276,11 +267,11 @@ void LDR_Scan(unsigned int steps){
             transmite_UART(2);
             to_char(adc_V2);
             transmite_UART(2);
-
     }
 
     adc_V1 = 0;
     adc_V2 = 0;
+    Disable_SERVO();
     state = state0;
     }
 
@@ -290,7 +281,6 @@ void LDR_Scan(unsigned int steps){
 void LIDR_Clib(){
 
     int i = 0;
-    int ii;
 
     Enable_SERVO(1315); // 90 degres
     enterLPM(lpm_mode);
@@ -307,13 +297,6 @@ void LIDR_Clib(){
         //wait for servo button
         enterLPM(lpm_mode);
 
-        // get values from LDR
-        /*for(ii = 0; ii< 4; ii++){
-            ADC_enable();
-            ADC_touch();
-            adc_V1 +=adcVal[3];//P1.0 LIDAR1
-            adc_V2 +=adcVal[0];//P1.3 LIDAR2
-        }*/
         adc_V1 = adc_V1 >> 2;
         adc_V2 = adc_V2 >> 2;
 
@@ -354,13 +337,14 @@ void printIntToLCD(unsigned int temp){
     lcd_puts(s);
 }
 
-void Script_Mode(){
+void flash(){
     unsigned int i, j;
     int address = infomation_seg_A;
-
     erase_segment(infomation_seg_A);          // Erase flash Information A and B
     while (state == state5){
         enterLPM(lpm_mode);
+
+        // WRITE FILES TO FLASH MEMORY
         for (i = 0; i < f.FilesCount; i++){
             f.FilesStart[i] = (int *)address;
             while (1){
@@ -370,17 +354,123 @@ void Script_Mode(){
                     address++;
                 }
                 index = 0;
-                if (string1[0] == 0x00 && string1[0] == 0x08)
+                if (string1[0] == 0x00 && string1[1] == 0x08){
                     break;
+                }
             }
             f.FilesSizes[i] = address - (int)f.FilesStart[i];
         }
         state = state0;
-        while(1){
-              _NOP();
-          }
     }
 }
 
+void Script_Mode(){
+    char fileNo, OP;
+    int i, x, k;
+    d = 50;
+    while (state == state6){
+        enterLPM(lpm_mode);
+        fileNo = char_array[0];
+        i = (int)f.FilesStart[fileNo] ;
+        while (i < (int)f.FilesStart[fileNo] + f.FilesSizes[fileNo]){
+            OP = charsToINT(read_data(i),read_data(i+1));
+            i = i+2;
+            switch (OP){
+                case 0x01:
+                    x = charsToINT(read_data(i),read_data(i+1));
+                    inc_lcd(x);
+                    break;
+                case 0x02:
+                    x = charsToINT(read_data(i),read_data(i+1));
+                    dec_lcd(x);
+                    break;
+                case 0x03:
+                    x = charsToINT(read_data(i),read_data(i+1));
+                    rra_lcd(x);
+                    break;
+                case 0x04:
+                    d = charsToINT(read_data(i),read_data(i+1));
+                    break;
+                case 0x05:
+                    lcd_clear();
+                    i = i-2;
+                    break;
+                case 0x06:
+                    to_char(OP);
+                    transmite_UART(2);
+                    x = charsToINT(read_data(i),read_data(i+1));
+                    Telemeter(x);
+                    state = state6;
+                    break;
+                case 0x07:
+                    to_char(OP);
+                    transmite_UART(2);
+                    x = charsToINT(read_data(i),read_data(i+1));
+                    i += 2;
+                    k = charsToINT(read_data(i),read_data(i+1));
+                    ObjectsDetectorSystem(x,k);
+                    state = state6;
+                    break;
+                case 0x08:
+                    state = state0;
+                    break;
+                default :
+                    break;
+            }
+            i += 2;
+            lcd_clear();
+            lcd_home();
+        }
+    }
+    char_array[0] = '\0';
+}
 
+int charsToINT(char high, char low){
+
+    int x;
+    x = low + (high << 4);
+    return (x);
+}
+
+void inc_lcd(int x){
+    unsigned int i;
+    Enable_DelayLCD();
+    for (i = 0 ; i <= x ; i++){
+        printIntToLCD(i);
+        enterLPM(lpm_mode);
+        lcd_clear();
+        lcd_home();
+    }
+    Disable_DelayLCD();
+}
+
+void dec_lcd(int x){
+    int i;
+    Enable_DelayLCD();
+    for (i = x ; i >= 0 ; i--){
+        printIntToLCD(i);
+        enterLPM(lpm_mode);
+        lcd_clear();
+        lcd_home();
+    }
+    Disable_DelayLCD();
+}
+
+void rra_lcd(char x){
+    unsigned int i,j;
+    Enable_DelayLCD();
+    for (j = 0; j < 2; j++){
+        lcd_data(x + '0');
+        for (i = 1 ; i < 16 ; i++){
+            enterLPM(lpm_mode);
+            lcd_cursor_left();
+            lcd_data('\n');
+            lcd_data(x + '0');
+        }
+        lcd_cursor_left();
+        lcd_data('\n');
+        lcd_new_line;
+    }
+    Disable_DelayLCD();
+}
 

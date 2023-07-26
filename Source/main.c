@@ -12,11 +12,7 @@ void main(void){
   state = state0;  // start in idle state on RESET
   lpm_mode = mode0;     // start in idle state on RESET
   sysConfig();
-  int j;
-  int steps = 30;
-  int cycles_in;
   Enable_SERVO(450);
-  enterLPM(lpm_mode);
   enterLPM(lpm_mode);
   Disable_SERVO();
 
@@ -27,7 +23,7 @@ void main(void){
             break;
 	    case state1:
             // 0 degrees is 450 and 180 degrees is 2140
-            ObjectsDetectorSystem(60);
+            ObjectsDetectorSystem(0,180);
             break;
 	    case state2:
 	        LDR_Scan(60);
@@ -36,13 +32,13 @@ void main(void){
             LIDR_Clib();
             break;
         case state4:
-            Telemeter();
+            Telemeter(0);
             break;
         case state5:
-            Script_Mode();
+            flash();
             break;
         case state6:
-            //TBD bounes
+            Script_Mode();
             break;
 	}
   }

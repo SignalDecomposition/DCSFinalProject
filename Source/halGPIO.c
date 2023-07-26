@@ -18,6 +18,7 @@ char string1[31];
 
 
 
+
 //--------------------------------------------------------------------
 //             System Configuration  
 //--------------------------------------------------------------------
@@ -74,7 +75,6 @@ void Enable_TRIGGER(){
 void Disable_TRIGGER(){
 
     TA1CCR1 = 0;
-    //TA1CTL &= ~MC_1;
 }
 
 void Enable_ECHO(){
@@ -84,25 +84,34 @@ void Enable_ECHO(){
     TA1CCTL2 |= CCIE;
 }
 
-void Disable_ECHO(){
-
-    //TA1CCTL2 &= ~CCIE;
-}
 
 void Enable_SERVO(unsigned int t){
 
+    TA0CCR0 = 26500;
     TA0CCR1 = t;
     TA0CTL |= MC_1 + TACLR;
     TA0CCTL0 |= CCIE;
-
 }
 
 void Disable_SERVO(){
+
     TA0CTL &= ~MC_1;
     TA0CCTL0 &= ~CCIE;
-    //TA0CCR1 = 0;
+}
 
+void Enable_DelayLCD(){
 
+    unsigned int t = 530*(unsigned int)d;
+    TA0CCR0 = t;
+    TA0CCR1 = 0;
+    TA0CTL |= MC_1 + TACLR;
+    TA0CCTL0 |= CCIE;
+}
+
+void Disable_DelayLCD(){
+
+    TA0CTL &= ~MC_1;
+    TA0CCTL0 &= ~CCIE;
 }
 
 void ADC_enable(){
@@ -117,29 +126,22 @@ void ADC_enable(){
 void transmite_UART(int size_tran){
 
     while(index < size_tran ){
-
         while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
         UCA0TXBUF = char_array[index];
         index++;
-
     }
-
        index = 0;
-
 }
 
 void ADC_touch(){
+
     while (ADC10CTL1 & ADC10BUSY);               // Wait if ADC10 core is active
     ADC10SA = (int)adcVal;
     ADC10CTL0 |= ENC + ADC10SC;      // Enable conversion, Sampling and conversion start
-
-    //enterLPM(lpm_mode);             // LPM0, ADC10_ISR will force exit
-
-    //ADC10CTL0 &= ~ADC10SC;
-
 }
 
 void to_char(unsigned int t){
+
     if(t < 256){
         char_array[0] = t & 0xFF;
         char_array[1] = 0x00;
@@ -163,6 +165,19 @@ void write_char_flash(int adress, char value)
   FCTL3 = FWKEY + LOCK;                     // Set LOCK bit
 }
 
+
+char read_data(int adress)
+{
+  char *Flash_ptr;                          // Flash pointer
+  char value;
+
+  Flash_ptr = (char *)adress;               // Initialize Flash pointer
+  value = *Flash_ptr;
+
+  return value;
+
+}
+
 void erase_segment(int adress)
 {
   int *Flash_ptr;                           // Flash pointer
@@ -175,22 +190,24 @@ void erase_segment(int adress)
 
   FCTL3 = FWKEY + LOCK;                     // Set LOCK bit
 }
+
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer0_A0_ISR (void)
 {
-    //was: count < 20
-    if(count < 20){
-        count = count + 1;
-    }else{
-        count = 0;
-        LPM0_EXIT;   // Exit LPM0
-    }
+        //was: count < 20
+        if(count < 20){
+            count = count + 1;
+        }else{
+            count = 0;
+            LPM0_EXIT;   // Exit LPM0
+        }
 }
 
 
 #pragma vector=TIMER1_A1_VECTOR
 __interrupt void Timer1_A1_ISR (void)
 {
+    P2OUT ^= BIT0;
     switch(__even_in_range(TA1IV,0x0A)){
 
         case  TA1IV_TACCR2:
@@ -203,7 +220,6 @@ __interrupt void Timer1_A1_ISR (void)
                 TA1CCTL2 &= ~CCIE;
                 TA1CTL &= ~MC_1;
                 first = 0x0;
-                //LPM0_EXIT;   // Exit LPM0
             }
             break;
 
@@ -212,6 +228,7 @@ __interrupt void Timer1_A1_ISR (void)
 
     }
 }
+
 
 // ADC10 interrupt service routine
 #pragma vector=ADC10_VECTOR
@@ -228,7 +245,6 @@ __interrupt void ADC10_ISR(void)
     else{
         ADC10CTL0 &= ~ENC;
         ADC10CTL0 &= ~ADC10ON;
-        //LPM0_EXIT;      // Clear CPUOFF bit from 0(SR)
         ADC10CTL0 &= ~ADC10SC;
         count_LDR = 0;
 
@@ -246,8 +262,6 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
 #error Compiler not supported!
 #endif
 {
-  P2OUT |= BIT0;
-  //while (!(IFG2&UCA0TXIFG));                // USCI_A0 TX buffer ready?
   if (state == state1){
       char_array[index] = UCA0RXBUF;
       index++;
@@ -276,7 +290,7 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
     }
   else if (state == state5){
       if (first_time == 0){
-          f.FilesCount = UCA0RXBUF;
+          f.FilesCount = UCA0RXBUF - '0';
           first_time = 1;
           index = 0;
           LPM0_EXIT;
@@ -294,10 +308,14 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
             }
       }
   }
-  else if (UCA0RXBUF == '0'){
-      UCA0TXBUF = 0;
-      state = state0;
+  else if (state == state6 && first_time){
 
+      char_array[0] = UCA0RXBUF - '0';
+      first_time = 0;
+      LPM0_EXIT;       //exit sleep mode
+  }
+  else if (UCA0RXBUF == '0'){
+      state = state0;
     }
   else if (UCA0RXBUF == '1'){
       state = state1;
@@ -322,7 +340,11 @@ void __attribute__ ((interrupt(USCIAB0RX_VECTOR))) USCI0RX_ISR (void)
          UCA0TXBUF = '1';
          LPM0_EXIT;
     }
-
+  else if (UCA0RXBUF == '6'){
+         state = state6;
+         UCA0TXBUF = '1';
+         LPM0_EXIT;
+    }
 
 }
 
