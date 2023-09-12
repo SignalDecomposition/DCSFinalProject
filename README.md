@@ -11,5 +11,5 @@ the MCU side in simple FSM:
 
 ## Demo
 
-![demo](https://www.youtube.com/watch?v=dkThi2uXjGU)
+[![Watch the video] (https://www.youtube.com/watch?v=dkThi2uXjGU)
 
